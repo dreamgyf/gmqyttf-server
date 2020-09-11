@@ -39,7 +39,12 @@ public class MqttServerSocket {
         mClientPool = ClientPool.create();
         mProcessor = new MqttServerSocketProcessor(mClientPool);
         while (true) {
-            if (mSelector.select() == 0) {
+            try {
+                if (mSelector.select() == 0) {
+                    continue;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
                 continue;
             }
             Set<SelectionKey> selectionKeys = mSelector.selectedKeys();
