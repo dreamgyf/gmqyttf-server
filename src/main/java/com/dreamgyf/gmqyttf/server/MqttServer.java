@@ -1,16 +1,17 @@
 package com.dreamgyf.gmqyttf.server;
 
-import com.dreamgyf.gmqyttf.server.enums.MqttVersion;
+import com.dreamgyf.gmqyttf.common.enums.MqttVersion;
+import com.dreamgyf.gmqyttf.server.socket.MqttServerSocket;
 
 import java.io.IOException;
-import java.net.SocketAddress;
-import java.nio.channels.SocketChannel;
 
 public class MqttServer {
 
     private MqttVersion mVersion;
 
     private int mPort;
+
+    private MqttServerSocket mServerSocket;
 
     private MqttServer(MqttVersion version, int port) {
         mVersion = version;
@@ -19,7 +20,7 @@ public class MqttServer {
 
     public static class Builder {
 
-        private MqttVersion version = MqttVersion.V_3_1_1;
+        private MqttVersion version = MqttVersion.V3_1_1;
 
         private int port = 1883;
 
@@ -40,7 +41,19 @@ public class MqttServer {
     }
 
     public void open() throws IOException {
-        SocketChannel socketChannel = SocketChannel.open();
-        socketChannel.configureBlocking(false);
+        mServerSocket = MqttServerSocket.create(mPort);
+        mServerSocket.open();
+    }
+
+    public void close() throws IOException {
+        mServerSocket.close();
+    }
+
+    public MqttVersion getVersion() {
+        return mVersion;
+    }
+
+    public int getPort() {
+        return mPort;
     }
 }
