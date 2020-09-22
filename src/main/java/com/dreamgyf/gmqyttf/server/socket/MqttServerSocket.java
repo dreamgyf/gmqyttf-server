@@ -20,6 +20,8 @@ public class MqttServerSocket {
 
     private MqttServerSocketProcessor mProcessor;
 
+    private boolean isRunning;
+
     private MqttServerSocket() {
     }
 
@@ -38,7 +40,8 @@ public class MqttServerSocket {
         mServerSocketChannel.register(mSelector, SelectionKey.OP_ACCEPT);
         mClientPool = ClientPool.create();
         mProcessor = new MqttServerSocketProcessor(mClientPool);
-        while (true) {
+        isRunning = true;
+        while (isRunning) {
             try {
                 if (mSelector.select() == 0) {
                     continue;
@@ -63,11 +66,12 @@ public class MqttServerSocket {
     }
 
     public void close() throws IOException {
+        isRunning = false;
         mSelector.close();
         mServerSocketChannel.close();
     }
 
     public boolean isOpen() {
-        return mSelector.isOpen() && mServerSocketChannel.isOpen();
+        return isRunning && mSelector.isOpen() && mServerSocketChannel.isOpen();
     }
 }

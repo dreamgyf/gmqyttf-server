@@ -23,8 +23,11 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
 
     private final ClientPool mClientPool;
 
+    private final MqttRequestHandler mRequestHandler;
+
     public MqttServerSocketProcessor(ClientPool clientPool) {
         mClientPool = clientPool;
+        mRequestHandler = new MqttRequestHandler(clientPool);
     }
 
     @Override
@@ -35,7 +38,7 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
             if (clientChannel != null) {
                 clientChannel.configureBlocking(false);
                 clientChannel.register(key.selector(), SelectionKey.OP_READ);
-                mClientPool.putEmptyClient(clientChannel.getRemoteAddress());
+                mClientPool.putEmptyClient(clientChannel);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -51,7 +54,7 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
             key.attach(packet);
         } else {
             try {
-                mClientPool.remove(channel.getRemoteAddress());
+                mClientPool.remove(channel);
                 channel.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -65,17 +68,15 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
         MqttPacket packet = (MqttPacket) key.attachment();
         if (packet != null) {
             try {
-                Client client = mClientPool.get(channel.getRemoteAddress());
-                MqttPacket respPacket = MqttRequestHandler.buildResponsePacket(client, packet);
+                MqttPacket respPacket = mRequestHandler.updateClientAndBuildRespPacket(channel, packet);
                 if (respPacket != null) {
                     channel.write(ByteBuffer.wrap(respPacket.getPacket()));
-                    client.setConnected(true);
                 }
                 key.interestOps(SelectionKey.OP_READ);
             } catch (MqttPacketException | IOException e) {
                 e.printStackTrace();
                 try {
-                    mClientPool.remove(channel.getRemoteAddress());
+                    mClientPool.remove(channel);
                     channel.close();
                 } catch (IOException ioException) {
                     ioException.printStackTrace();
@@ -83,7 +84,7 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
             }
         } else {
             try {
-                mClientPool.remove(channel.getRemoteAddress());
+                mClientPool.remove(channel);
                 channel.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -93,7 +94,7 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
 
     private MqttPacket fetchPacket(SocketChannel channel) {
         try {
-            Client client = mClientPool.get(channel.getRemoteAddress());
+            Client client = mClientPool.get(channel);
             if (client == null) {
                 return null;
             }
