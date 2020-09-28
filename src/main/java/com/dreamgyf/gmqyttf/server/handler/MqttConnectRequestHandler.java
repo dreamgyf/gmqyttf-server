@@ -6,6 +6,7 @@ import com.dreamgyf.gmqyttf.common.packet.MqttConnackPacket;
 import com.dreamgyf.gmqyttf.common.packet.MqttConnectPacket;
 import com.dreamgyf.gmqyttf.common.packet.MqttPacket;
 import com.dreamgyf.gmqyttf.common.throwable.exception.packet.MqttPacketException;
+import com.dreamgyf.gmqyttf.common.throwable.exception.packet.UnknownVersionException;
 import com.dreamgyf.gmqyttf.server.data.Client;
 
 public class MqttConnectRequestHandler {
@@ -15,7 +16,7 @@ public class MqttConnectRequestHandler {
             case V3_1_1:
                 return handleV311(client, mqttPacket);
         }
-        throw new MqttPacketException();
+        throw new UnknownVersionException();
     }
 
     private static MqttPacket handleV311(Client client, MqttConnectPacket mqttPacket) {

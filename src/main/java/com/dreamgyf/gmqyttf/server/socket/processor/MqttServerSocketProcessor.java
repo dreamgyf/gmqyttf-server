@@ -76,7 +76,6 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
             } catch (MqttPacketException | IOException e) {
                 e.printStackTrace();
                 try {
-                    mClientPool.remove(channel);
                     channel.close();
                 } catch (IOException ioException) {
                     ioException.printStackTrace();
