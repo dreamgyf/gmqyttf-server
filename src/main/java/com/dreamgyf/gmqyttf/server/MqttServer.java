@@ -1,6 +1,8 @@
 package com.dreamgyf.gmqyttf.server;
 
 import com.dreamgyf.gmqyttf.common.enums.MqttVersion;
+import com.dreamgyf.gmqyttf.server.data.ClientSessionPool;
+import com.dreamgyf.gmqyttf.server.data.ConnectedClientPool;
 import com.dreamgyf.gmqyttf.server.socket.MqttServerSocket;
 
 import java.io.IOException;
@@ -13,9 +15,15 @@ public class MqttServer {
 
     private MqttServerSocket mServerSocket;
 
+    private final ClientSessionPool mClientSessionPool;
+
+    private final ConnectedClientPool mConnectedClientPool;
+
     private MqttServer(MqttVersion version, int port) {
         mVersion = version;
         mPort = port;
+        mConnectedClientPool = ConnectedClientPool.create();
+        mClientSessionPool = ClientSessionPool.create();
     }
 
     public static class Builder {
@@ -41,7 +49,7 @@ public class MqttServer {
     }
 
     public void open() throws IOException {
-        mServerSocket = MqttServerSocket.create(mPort);
+        mServerSocket = MqttServerSocket.create(mPort, mClientSessionPool, mConnectedClientPool);
         mServerSocket.open();
     }
 

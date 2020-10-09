@@ -1,6 +1,7 @@
 package com.dreamgyf.gmqyttf.server.socket;
 
-import com.dreamgyf.gmqyttf.server.data.ClientPool;
+import com.dreamgyf.gmqyttf.server.data.ClientSessionPool;
+import com.dreamgyf.gmqyttf.server.data.ConnectedClientPool;
 import com.dreamgyf.gmqyttf.server.socket.processor.MqttServerSocketProcessor;
 
 import java.io.IOException;
@@ -16,7 +17,9 @@ public class MqttServerSocket {
 
     private ServerSocketChannel mServerSocketChannel;
 
-    private ClientPool mClientPool;
+    private ClientSessionPool mClientSessionPool;
+
+    private ConnectedClientPool mConnectedClientPool;
 
     private MqttServerSocketProcessor mProcessor;
 
@@ -25,7 +28,7 @@ public class MqttServerSocket {
     private MqttServerSocket() {
     }
 
-    public static MqttServerSocket create(int port) throws IOException {
+    public static MqttServerSocket create(int port, ClientSessionPool clientSessionPool, ConnectedClientPool connectedClientPool) throws IOException {
         MqttServerSocket serverSocket = new MqttServerSocket();
         Selector selector = Selector.open();
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
@@ -33,13 +36,14 @@ public class MqttServerSocket {
         serverSocketChannel.bind(new InetSocketAddress(port));
         serverSocket.mSelector = selector;
         serverSocket.mServerSocketChannel = serverSocketChannel;
+        serverSocket.mClientSessionPool = clientSessionPool;
+        serverSocket.mConnectedClientPool = connectedClientPool;
         return serverSocket;
     }
 
     public void open() throws IOException {
         mServerSocketChannel.register(mSelector, SelectionKey.OP_ACCEPT);
-        mClientPool = ClientPool.create();
-        mProcessor = new MqttServerSocketProcessor(mClientPool);
+        mProcessor = new MqttServerSocketProcessor(mClientSessionPool, mConnectedClientPool);
         isRunning = true;
         while (isRunning) {
             try {

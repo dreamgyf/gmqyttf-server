@@ -9,7 +9,8 @@ import com.dreamgyf.gmqyttf.common.throwable.exception.packet.MqttPacketParseExc
 import com.dreamgyf.gmqyttf.common.utils.ByteUtils;
 import com.dreamgyf.gmqyttf.common.utils.MqttPacketUtils;
 import com.dreamgyf.gmqyttf.server.data.Client;
-import com.dreamgyf.gmqyttf.server.data.ClientPool;
+import com.dreamgyf.gmqyttf.server.data.ClientSessionPool;
+import com.dreamgyf.gmqyttf.server.data.ConnectedClientPool;
 import com.dreamgyf.gmqyttf.server.handler.MqttRequestHandler;
 import com.dreamgyf.gmqyttf.server.socket.utils.ReadUtils;
 
@@ -21,13 +22,16 @@ import java.nio.channels.SocketChannel;
 
 public class MqttServerSocketProcessor implements NioSocketProcessor {
 
-    private final ClientPool mClientPool;
+    private final ClientSessionPool mClientSessionPool;
+
+    private final ConnectedClientPool mConnectedClientPool;
 
     private final MqttRequestHandler mRequestHandler;
 
-    public MqttServerSocketProcessor(ClientPool clientPool) {
-        mClientPool = clientPool;
-        mRequestHandler = new MqttRequestHandler(clientPool);
+    public MqttServerSocketProcessor(ClientSessionPool clientSessionPool, ConnectedClientPool connectedClientPool) {
+        mClientSessionPool = clientSessionPool;
+        mConnectedClientPool = connectedClientPool;
+        mRequestHandler = new MqttRequestHandler(clientSessionPool, connectedClientPool);
     }
 
     @Override
@@ -38,7 +42,7 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
             if (clientChannel != null) {
                 clientChannel.configureBlocking(false);
                 clientChannel.register(key.selector(), SelectionKey.OP_READ);
-                mClientPool.putEmptyClient(clientChannel);
+                mConnectedClientPool.putEmptyClient(clientChannel);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -54,7 +58,7 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
             key.attach(packet);
         } else {
             try {
-                mClientPool.remove(channel);
+                mConnectedClientPool.remove(channel);
                 channel.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -83,7 +87,7 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
             }
         } else {
             try {
-                mClientPool.remove(channel);
+                mConnectedClientPool.remove(channel);
                 channel.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -93,7 +97,7 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
 
     private MqttPacket fetchPacket(SocketChannel channel) {
         try {
-            Client client = mClientPool.get(channel);
+            Client client = mConnectedClientPool.get(channel);
             if (client == null) {
                 return null;
             }

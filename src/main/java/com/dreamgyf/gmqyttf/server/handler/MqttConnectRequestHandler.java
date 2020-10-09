@@ -14,13 +14,13 @@ public class MqttConnectRequestHandler {
     public static MqttPacket updateClientAndBuildRespPacket(Client client, MqttConnectPacket mqttPacket) throws MqttPacketException {
         switch (mqttPacket.getVersion()) {
             case V3_1_1:
-                return handleV311(client, mqttPacket);
+                return handle(client, mqttPacket);
         }
         throw new UnknownVersionException();
     }
 
-    private static MqttPacket handleV311(Client client, MqttConnectPacket mqttPacket) {
-        client.setVersion(MqttVersion.V3_1_1);
+    private static MqttPacket handle(Client client, MqttConnectPacket mqttPacket) {
+        client.setVersion(mqttPacket.getVersion());
         return new MqttConnackPacket.Builder().connectReturnCode(MqttConnectReturnCode.V3_1_1.ACCEPT).build(MqttVersion.V3_1_1);
     }
 

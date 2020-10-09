@@ -3,22 +3,26 @@ package com.dreamgyf.gmqyttf.server.handler;
 import com.dreamgyf.gmqyttf.common.packet.*;
 import com.dreamgyf.gmqyttf.common.throwable.exception.packet.MqttPacketException;
 import com.dreamgyf.gmqyttf.server.data.Client;
-import com.dreamgyf.gmqyttf.server.data.ClientPool;
+import com.dreamgyf.gmqyttf.server.data.ClientSessionPool;
+import com.dreamgyf.gmqyttf.server.data.ConnectedClientPool;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
 public class MqttRequestHandler {
 
-    private final ClientPool mClientPool;
+    private final ClientSessionPool mClientSessionPool;
 
-    public MqttRequestHandler(ClientPool clientPool) {
-        mClientPool = clientPool;
+    private final ConnectedClientPool mConnectedClientPool;
+
+    public MqttRequestHandler(ClientSessionPool clientSessionPool, ConnectedClientPool connectedClientPool) {
+        mClientSessionPool = clientSessionPool;
+        mConnectedClientPool = connectedClientPool;
     }
 
     public MqttPacket updateClientAndBuildRespPacket(SocketChannel channel, MqttPacket mqttPacket) throws MqttPacketException {
         try {
-            Client client = mClientPool.get(channel);
+            Client client = mConnectedClientPool.get(channel);
             if (mqttPacket instanceof MqttConnectPacket) {
                 return MqttConnectRequestHandler.updateClientAndBuildRespPacket(client, (MqttConnectPacket) mqttPacket);
             } else if (mqttPacket instanceof MqttPublishPacket) {
@@ -38,14 +42,14 @@ public class MqttRequestHandler {
             } else if (mqttPacket instanceof MqttPingreqPacket) {
                 return MqttPingreqRequestHandler.updateClientAndBuildRespPacket(client, (MqttPingreqPacket) mqttPacket);
             } else if (mqttPacket instanceof MqttDisconnectPacket) {
-                mClientPool.remove(channel);
+                mConnectedClientPool.remove(channel);
                 return MqttDisconnectRequestHandler.updateClientAndBuildRespPacket(client, (MqttDisconnectPacket) mqttPacket);
             }
 
         } catch (IOException | MqttPacketException e) {
             e.printStackTrace();
             try {
-                mClientPool.remove(channel);
+                mConnectedClientPool.remove(channel);
             } catch (IOException ioException) {
                 ioException.printStackTrace();
             }
