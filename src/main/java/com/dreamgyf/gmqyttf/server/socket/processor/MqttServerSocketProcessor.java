@@ -3,8 +3,8 @@ package com.dreamgyf.gmqyttf.server.socket.processor;
 import com.dreamgyf.gmqyttf.common.enums.MqttPacketType;
 import com.dreamgyf.gmqyttf.common.enums.MqttVersion;
 import com.dreamgyf.gmqyttf.common.packet.*;
+import com.dreamgyf.gmqyttf.common.throwable.exception.MqttException;
 import com.dreamgyf.gmqyttf.common.throwable.exception.packet.IllegalPacketException;
-import com.dreamgyf.gmqyttf.common.throwable.exception.packet.MqttPacketException;
 import com.dreamgyf.gmqyttf.common.throwable.exception.packet.MqttPacketParseException;
 import com.dreamgyf.gmqyttf.common.utils.ByteUtils;
 import com.dreamgyf.gmqyttf.common.utils.MqttPacketUtils;
@@ -42,7 +42,6 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
             if (clientChannel != null) {
                 clientChannel.configureBlocking(false);
                 clientChannel.register(key.selector(), SelectionKey.OP_READ);
-                mConnectedClientPool.putEmptyClient(clientChannel);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -72,12 +71,12 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
         MqttPacket packet = (MqttPacket) key.attachment();
         if (packet != null) {
             try {
-                MqttPacket respPacket = mRequestHandler.updateClientAndBuildRespPacket(channel, packet);
+                MqttPacket respPacket = mRequestHandler.handleClientAndPacket(channel, packet);
                 if (respPacket != null) {
                     channel.write(ByteBuffer.wrap(respPacket.getPacket()));
                 }
                 key.interestOps(SelectionKey.OP_READ);
-            } catch (MqttPacketException | IOException e) {
+            } catch (MqttException | IOException e) {
                 e.printStackTrace();
                 try {
                     channel.close();
@@ -98,17 +97,14 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
     private MqttPacket fetchPacket(SocketChannel channel) {
         try {
             Client client = mConnectedClientPool.get(channel);
-            if (client == null) {
-                return null;
-            }
 
             byte[] header = new byte[1];
             header[0] = ReadUtils.readSocketOneBit(channel);
             byte type = MqttPacketUtils.parseType(header[0]);
 
-            if ((type != MqttPacketType.V3_1_1.CONNECT && !client.isConnected()) ||
-                    (type == MqttPacketType.V3_1_1.CONNECT && client.isConnected()) ||
-                    (client.isConnected() && !MqttPacketUtils.isTypeInVersion(type, client.getVersion()))) {
+            if ((type != MqttPacketType.V3_1_1.CONNECT && client == null) ||
+                    (type == MqttPacketType.V3_1_1.CONNECT && client != null) ||
+                    (client != null && !MqttPacketUtils.isTypeInVersion(type, client.getVersion()))) {
                 return null;
             }
 
@@ -121,7 +117,7 @@ public class MqttServerSocketProcessor implements NioSocketProcessor {
             byte[] fixHeader = ByteUtils.combine(header, remainLength);
             byte[] residue = ReadUtils.readSocketBit(channel, MqttPacketUtils.getRemainingLength(remainLength, 0));
             byte[] packet = ByteUtils.combine(fixHeader, residue);
-            return parsePacket(packet, client.isConnected() ? client.getVersion() : MqttVersion.V3_1_1);
+            return parsePacket(packet, client != null ? client.getVersion() : MqttVersion.V3_1_1);
 
         } catch (Throwable e) {
             e.printStackTrace();

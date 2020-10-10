@@ -1,7 +1,10 @@
 package com.dreamgyf.gmqyttf.server.handler;
 
 import com.dreamgyf.gmqyttf.common.packet.*;
+import com.dreamgyf.gmqyttf.common.throwable.exception.MqttException;
+import com.dreamgyf.gmqyttf.common.throwable.exception.connect.MqttConnectException;
 import com.dreamgyf.gmqyttf.common.throwable.exception.packet.MqttPacketException;
+import com.dreamgyf.gmqyttf.common.throwable.runtime.connect.MqttUnconnectedException;
 import com.dreamgyf.gmqyttf.server.data.Client;
 import com.dreamgyf.gmqyttf.server.data.ClientSessionPool;
 import com.dreamgyf.gmqyttf.server.data.ConnectedClientPool;
@@ -20,30 +23,39 @@ public class MqttRequestHandler {
         mConnectedClientPool = connectedClientPool;
     }
 
-    public MqttPacket updateClientAndBuildRespPacket(SocketChannel channel, MqttPacket mqttPacket) throws MqttPacketException {
+    public MqttPacket handleClientAndPacket(SocketChannel channel, MqttPacket mqttPacket) throws MqttException {
         try {
             Client client = mConnectedClientPool.get(channel);
+
+            if(client != null && mqttPacket instanceof MqttConnectPacket) {
+                throw new MqttConnectException("Already connected");
+            } else if(client == null && !(mqttPacket instanceof MqttConnectPacket)) {
+                throw new MqttUnconnectedException("Unconnected");
+            }
+
             if (mqttPacket instanceof MqttConnectPacket) {
-                return MqttConnectRequestHandler.updateClientAndBuildRespPacket(client, (MqttConnectPacket) mqttPacket);
+                client = new Client();
+                mConnectedClientPool.put(channel, client);
+                return MqttConnectRequestHandler.handleClientAndPacket(mClientSessionPool, client, (MqttConnectPacket) mqttPacket);
             } else if (mqttPacket instanceof MqttPublishPacket) {
-                return MqttPublishRequestHandler.updateClientAndBuildRespPacket(client, (MqttPublishPacket) mqttPacket);
+                return MqttPublishRequestHandler.handleClientAndPacket(client, (MqttPublishPacket) mqttPacket);
             } else if (mqttPacket instanceof MqttPubackPacket) {
-                return MqttPubackRequestHandler.updateClientAndBuildRespPacket(client, (MqttPubackPacket) mqttPacket);
+                return MqttPubackRequestHandler.handleClientAndPacket(client, (MqttPubackPacket) mqttPacket);
             } else if (mqttPacket instanceof MqttPubrecPacket) {
-                return MqttPubrecRequestHandler.updateClientAndBuildRespPacket(client, (MqttPubrecPacket) mqttPacket);
+                return MqttPubrecRequestHandler.handleClientAndPacket(client, (MqttPubrecPacket) mqttPacket);
             } else if (mqttPacket instanceof MqttPubrelPacket) {
-                return MqttPubrelRequestHandler.updateClientAndBuildRespPacket(client, (MqttPubrelPacket) mqttPacket);
+                return MqttPubrelRequestHandler.handleClientAndPacket(client, (MqttPubrelPacket) mqttPacket);
             } else if (mqttPacket instanceof MqttPubcompPacket) {
-                return MqttPubcompRequestHandler.updateClientAndBuildRespPacket(client, (MqttPubcompPacket) mqttPacket);
+                return MqttPubcompRequestHandler.handleClientAndPacket(client, (MqttPubcompPacket) mqttPacket);
             } else if (mqttPacket instanceof MqttSubscribePacket) {
-                return MqttSubscribeRequestHandler.updateClientAndBuildRespPacket(client, (MqttSubscribePacket) mqttPacket);
+                return MqttSubscribeRequestHandler.handleClientAndPacket(client, (MqttSubscribePacket) mqttPacket);
             } else if (mqttPacket instanceof MqttUnsubscribePacket) {
-                return MqttUnsubscribeRequestHandler.updateClientAndBuildRespPacket(client, (MqttUnsubscribePacket) mqttPacket);
+                return MqttUnsubscribeRequestHandler.handleClientAndPacket(client, (MqttUnsubscribePacket) mqttPacket);
             } else if (mqttPacket instanceof MqttPingreqPacket) {
-                return MqttPingreqRequestHandler.updateClientAndBuildRespPacket(client, (MqttPingreqPacket) mqttPacket);
+                return MqttPingreqRequestHandler.handleClientAndPacket(client, (MqttPingreqPacket) mqttPacket);
             } else if (mqttPacket instanceof MqttDisconnectPacket) {
                 mConnectedClientPool.remove(channel);
-                return MqttDisconnectRequestHandler.updateClientAndBuildRespPacket(client, (MqttDisconnectPacket) mqttPacket);
+                return MqttDisconnectRequestHandler.handleClientAndPacket(client, (MqttDisconnectPacket) mqttPacket);
             }
 
         } catch (IOException | MqttPacketException e) {

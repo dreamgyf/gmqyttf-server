@@ -8,7 +8,7 @@ import com.dreamgyf.gmqyttf.server.data.Client;
 
 public class MqttPubrelRequestHandler {
 
-    public static MqttPubcompPacket updateClientAndBuildRespPacket(Client client, MqttPubrelPacket mqttPacket) throws MqttPacketException {
+    public static MqttPubcompPacket handleClientAndPacket(Client client, MqttPubrelPacket mqttPacket) throws MqttPacketException {
         switch (client.getVersion()) {
             case V3_1_1:
                 return handleV311(client, mqttPacket);

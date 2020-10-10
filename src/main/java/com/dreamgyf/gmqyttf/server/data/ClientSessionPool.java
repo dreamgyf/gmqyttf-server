@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class ClientSessionPool {
 
-    private final Map<Short, Client> clientIdMap = new HashMap<>();
+    private final Map<String, Client> clientIdMap = new HashMap<>();
 
     private ClientSessionPool() {
     }
@@ -14,19 +14,19 @@ public class ClientSessionPool {
         return new ClientSessionPool();
     }
 
-    public void put(short id, Client client) {
+    public void put(String id, Client client) {
         clientIdMap.put(id, client);
     }
 
-    public Client get(short id) {
+    public Client get(String id) {
         return clientIdMap.get(id);
     }
 
-    public boolean contains(short id) {
+    public boolean contains(String id) {
         return clientIdMap.containsKey(id);
     }
 
-    public Client remove(short id) {
+    public Client remove(String id) {
         return clientIdMap.remove(id);
     }
 }

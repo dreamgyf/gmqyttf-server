@@ -17,8 +17,8 @@ public class ConnectedClientPool {
         return new ConnectedClientPool();
     }
 
-    public void putEmptyClient(SocketChannel channel) throws IOException {
-        mClientMap.put(channel.getRemoteAddress(), new Client());
+    public void put(SocketChannel channel, Client client) throws IOException {
+        mClientMap.put(channel.getRemoteAddress(), client);
     }
 
     public Client get(SocketChannel channel) throws IOException {
